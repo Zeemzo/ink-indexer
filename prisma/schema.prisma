@@ -1,0 +1,77 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Generic log table - stores all raw events
+model EventLog {
+  id              String    @id @default(cuid())
+  blockNumber     BigInt
+  blockTimestamp  DateTime
+  transactionHash String    @db.VarChar(66)
+  logIndex        Int
+  address         String    @db.VarChar(42)
+  topics          String[]
+  data            String    @db.Text
+
+  createdAt       DateTime  @default(now())
+
+  @@index([blockNumber])
+  @@index([transactionHash])
+  @@index([address])
+  @@map("event_logs")
+}
+
+// Typed table - ERC-20 Transfers
+model ERC20Transfer {
+  id              String    @id @default(cuid())
+  blockNumber     BigInt
+  blockTimestamp  DateTime
+  transactionHash String    @db.VarChar(66)
+  logIndex        Int
+
+  from            String    @db.VarChar(42)
+  to              String    @db.VarChar(42)
+  value           String    @db.Text // Store as string to handle BigInt
+  tokenAddress    String    @db.VarChar(42)
+
+  createdAt       DateTime  @default(now())
+
+  @@index([blockNumber])
+  @@index([to])
+  @@index([tokenAddress])
+  @@index([transactionHash])
+  @@map("erc20_transfers")
+}
+
+// Typed table - Uniswap/PancakeSwap-style Swaps
+model Swap {
+  id              String    @id @default(cuid())
+  blockNumber     BigInt
+  blockTimestamp  DateTime
+  transactionHash String    @db.VarChar(66)
+  logIndex        Int
+
+  poolAddress     String    @db.VarChar(42)
+  sender          String    @db.VarChar(42)
+  recipient       String    @db.VarChar(42)
+  amount0In       String    @db.Text
+  amount1In       String    @db.Text
+  amount0Out      String    @db.Text
+  amount1Out      String    @db.Text
+
+  createdAt       DateTime  @default(now())
+
+  @@index([blockNumber])
+  @@index([poolAddress])
+  @@index([recipient])
+  @@index([transactionHash])
+  @@map("swaps")
+}
