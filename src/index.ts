@@ -6,6 +6,8 @@ import { OnchainIndexer } from './indexer/index.js';
 import { createGraphQLServer } from './api/graphql/server.js';
 import { expressMiddleware } from '@apollo/server/express4';
 import express from 'express';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
 
 // Validate environment variables
 validateEnv();
@@ -13,6 +15,7 @@ validateEnv();
 // Global state
 let indexer: OnchainIndexer;
 let httpServer: ReturnType<typeof createServer>;
+let wsServer: WebSocketServer | undefined;
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Shutting down gracefully...');
@@ -20,6 +23,10 @@ async function shutdown(signal: string): Promise<void> {
   try {
     if (indexer) {
       await indexer.stop();
+    }
+
+    if (wsServer) {
+      wsServer.close();
     }
 
     if (httpServer) {
@@ -55,7 +62,7 @@ async function main(): Promise<void> {
 
   httpServer = createServer(app);
 
-  const { server: graphqlServer } = await createGraphQLServer(indexer);
+  const { server: graphqlServer, schema } = await createGraphQLServer(indexer);
 
   app.use(
     env.graphqlPath,
@@ -81,6 +88,16 @@ async function main(): Promise<void> {
       database: dbConnected,
     });
   });
+
+  // WebSocket server for GraphQL subscriptions
+  wsServer = new WebSocketServer({
+    server: httpServer,
+    path: env.graphqlPath,
+  });
+
+  useServer({ schema }, wsServer);
+
+  logger.info({ path: env.graphqlPath }, 'WebSocket subscription server started');
 
   httpServer.listen(env.port, () => {
     logger.info(

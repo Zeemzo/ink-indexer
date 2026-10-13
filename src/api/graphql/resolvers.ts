@@ -8,15 +8,26 @@ export function createResolvers(indexer: OnchainIndexer) {
   const storage = indexer.getStorage();
   const eventEmitter = indexer.getEventEmitter();
 
+  // Serialize BigInt/Date fields for GraphQL compatibility
+  function serializeForGraphQL(data: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (typeof val === 'bigint') result[key] = val.toString();
+      else if (val instanceof Date) result[key] = val.toISOString();
+      else result[key] = val;
+    }
+    return result;
+  }
+
   // Subscribe to indexer events and publish to GraphQL subscriptions
   eventEmitter.subscribe((event) => {
     if (event.type === 'erc20-transfer') {
       pubsub.publish(NEW_EVENTS_TOPIC, {
-        newEvents: { ...event.data, __typename: 'ERC20Transfer' },
+        newEvents: { ...serializeForGraphQL(event.data), __typename: 'ERC20Transfer' },
       });
     } else if (event.type === 'swap') {
       pubsub.publish(NEW_EVENTS_TOPIC, {
-        newEvents: { ...event.data, __typename: 'Swap' },
+        newEvents: { ...serializeForGraphQL(event.data), __typename: 'Swap' },
       });
     }
   });
@@ -71,6 +82,15 @@ export function createResolvers(indexer: OnchainIndexer) {
           errorCount: currentState.errorCount,
           uptime: indexer.getUptime(),
         };
+      },
+    },
+
+    Event: {
+      __resolveType(obj: any) {
+        if (obj.__typename) return obj.__typename;
+        if (obj.tokenAddress) return 'ERC20Transfer';
+        if (obj.poolAddress) return 'Swap';
+        return null;
       },
     },
 

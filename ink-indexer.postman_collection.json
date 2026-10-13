@@ -1,0 +1,359 @@
+{
+  "info": {
+    "name": "Ink Indexer API",
+    "description": "API collection for the Ink Chain Onchain Event Indexer — covers health checks, GraphQL queries for events, transfers, swaps, stats, and indexer status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns the health status of the indexer including uptime, database connection, and latest indexed block."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Indexer Status",
+      "item": [
+        {
+          "name": "Get Indexer Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetStatus {\n  status {\n    isIndexing\n    lastBlockNumber\n    errorCount\n    uptime\n  }\n}",
+                "variables": ""
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns current indexer state: whether it's actively indexing, the last processed block, error count, and uptime in seconds."
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetStats {\n  stats {\n    totalEvents\n    totalTransfers\n    totalSwaps\n    latestBlock\n  }\n}",
+                "variables": ""
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns aggregate statistics: total events, transfers, swaps, and the latest block number in the database."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Get All Events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetAllEvents($first: Int) {\n  events(first: $first) {\n    ... on ERC20Transfer {\n      id\n      blockNumber\n      blockTimestamp\n      transactionHash\n      from\n      to\n      value\n      tokenAddress\n    }\n    ... on Swap {\n      id\n      blockNumber\n      blockTimestamp\n      transactionHash\n      poolAddress\n      sender\n      recipient\n      amount0In\n      amount1In\n      amount0Out\n      amount1Out\n    }\n  }\n}",
+                "variables": "{\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns all recent events (both ERC-20 transfers and swaps) using inline fragments on the Event union type."
+          }
+        },
+        {
+          "name": "Get ERC-20 Transfer Events Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetTransferEvents($first: Int) {\n  events(first: $first, type: ERC20_TRANSFER) {\n    ... on ERC20Transfer {\n      id\n      blockNumber\n      blockTimestamp\n      transactionHash\n      from\n      to\n      value\n      tokenAddress\n    }\n  }\n}",
+                "variables": "{\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns only ERC-20 Transfer events by filtering with the ERC20_TRANSFER type."
+          }
+        },
+        {
+          "name": "Get Swap Events Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetSwapEvents($first: Int) {\n  events(first: $first, type: SWAP) {\n    ... on Swap {\n      id\n      blockNumber\n      blockTimestamp\n      transactionHash\n      poolAddress\n      sender\n      recipient\n      amount0In\n      amount1In\n      amount0Out\n      amount1Out\n    }\n  }\n}",
+                "variables": "{\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns only Swap events by filtering with the SWAP type."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "Get Recent Transfers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetRecentTransfers($first: Int) {\n  transfers(first: $first) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    from\n    to\n    value\n    tokenAddress\n  }\n}",
+                "variables": "{\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns the most recent ERC-20 token transfers."
+          }
+        },
+        {
+          "name": "Get Transfers by Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetTransfersByAddress($to: String, $first: Int) {\n  transfers(to: $to, first: $first) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    from\n    to\n    value\n    tokenAddress\n  }\n}",
+                "variables": "{\n  \"to\": \"0x0000000000000000000000000000000000000000\",\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns ERC-20 transfers filtered by recipient address. Replace the address in variables with an actual address."
+          }
+        },
+        {
+          "name": "Get Transfers with Pagination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetTransfersPaginated($first: Int, $after: String) {\n  transfers(first: $first, after: $after) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    from\n    to\n    value\n    tokenAddress\n  }\n}",
+                "variables": "{\n  \"first\": 5,\n  \"after\": null\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns ERC-20 transfers with cursor-based pagination. Set 'after' to the last item's ID from a previous response to get the next page."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Swaps",
+      "item": [
+        {
+          "name": "Get Recent Swaps",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetRecentSwaps($first: Int) {\n  swaps(first: $first) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    poolAddress\n    sender\n    recipient\n    amount0In\n    amount1In\n    amount0Out\n    amount1Out\n  }\n}",
+                "variables": "{\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns the most recent DEX swaps (Uniswap V2/V3)."
+          }
+        },
+        {
+          "name": "Get Swaps by Pool Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetSwapsByPool($poolAddress: String, $first: Int) {\n  swaps(poolAddress: $poolAddress, first: $first) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    poolAddress\n    sender\n    recipient\n    amount0In\n    amount1In\n    amount0Out\n    amount1Out\n  }\n}",
+                "variables": "{\n  \"poolAddress\": \"0x30959f21d16faf065d87302a98c36fc573bd763a\",\n  \"first\": 10\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns swaps filtered by a specific liquidity pool address."
+          }
+        },
+        {
+          "name": "Get Swaps with Pagination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetSwapsPaginated($first: Int, $after: String) {\n  swaps(first: $first, after: $after) {\n    id\n    blockNumber\n    blockTimestamp\n    transactionHash\n    poolAddress\n    sender\n    recipient\n    amount0In\n    amount1In\n    amount0Out\n    amount1Out\n  }\n}",
+                "variables": "{\n  \"first\": 5,\n  \"after\": null\n}"
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "Returns swaps with cursor-based pagination. Set 'after' to the last item's ID from a previous response."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Combined Queries",
+      "item": [
+        {
+          "name": "Dashboard Overview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query DashboardOverview {\n  status {\n    isIndexing\n    lastBlockNumber\n    errorCount\n    uptime\n  }\n  stats {\n    totalEvents\n    totalTransfers\n    totalSwaps\n    latestBlock\n  }\n  transfers(first: 5) {\n    id\n    blockNumber\n    transactionHash\n    from\n    to\n    value\n    tokenAddress\n  }\n  swaps(first: 5) {\n    id\n    blockNumber\n    transactionHash\n    poolAddress\n    sender\n    recipient\n    amount0In\n    amount1In\n    amount0Out\n    amount1Out\n  }\n}",
+                "variables": ""
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/graphql",
+              "host": ["{{baseUrl}}"],
+              "path": ["graphql"]
+            },
+            "description": "A combined query that fetches everything needed for a dashboard: indexer status, stats, recent transfers, and recent swaps in a single request."
+          }
+        }
+      ]
+    }
+  ]
+}
